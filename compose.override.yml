@@ -17,9 +17,26 @@ services:
     networks:
       - huly_net
 
+  # Fulltext migration (Phase 2 step 2): Elasticsearch → Meilisearch.
   elastic:
+    profiles: ["kanbee-disabled"]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
     environment:
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-kanbee-meili-secret}
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - huly_net
 
   front:
     volumes:
@@ -41,9 +58,10 @@ services:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
 
   fulltext:
-    image: hardcoreeng/fulltext:kanbee-v1
+    image: hardcoreeng/fulltext:kanbee-v2
     environment:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+      - FULLTEXT_DB_URL=meilisearch://${MEILI_MASTER_KEY:-kanbee-meili-secret}@meilisearch:7700
 
   account:
     environment:
@@ -55,3 +73,4 @@ services:
 
 volumes:
   pg_data:
+  meili_data:
