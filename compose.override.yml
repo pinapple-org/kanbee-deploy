@@ -1,0 +1,25 @@
+services:
+  cockroach:
+    image: postgres:18-alpine
+    command: postgres
+    environment:
+      POSTGRES_USER: ${CR_USERNAME}
+      POSTGRES_PASSWORD: ${CR_USER_PASSWORD}
+      POSTGRES_DB: ${CR_DATABASE}
+    volumes: !override
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CR_USERNAME} -d ${CR_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  elastic:
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+
+volumes:
+  pg_data:
