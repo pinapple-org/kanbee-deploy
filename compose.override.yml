@@ -26,5 +26,32 @@ services:
       - ./kanbee-branding/branding.json:/app/dist/branding.json:ro
       - ./kanbee-branding/kanbee:/app/dist/kanbee:ro
 
+  # Queue migration (Phase 2 step 1): Redpanda/Kafka → PostgreSQL LISTEN/NOTIFY.
+  # Custom images built from pinapple-org/kanbee platform fork include the
+  # @hcengineering/pgqueue adapter; dispatcher in @hcengineering/kafka routes
+  # postgres:// QUEUE_CONFIG values to it automatically.
+  transactor:
+    image: hardcoreeng/transactor:kanbee-v1
+    environment:
+      - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+
+  workspace:
+    image: hardcoreeng/workspace:kanbee-v1
+    environment:
+      - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+
+  fulltext:
+    image: hardcoreeng/fulltext:kanbee-v1
+    environment:
+      - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+
+  account:
+    environment:
+      - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+
+  # Disable Redpanda — the pgqueue adapter in the Postgres database replaces it.
+  redpanda:
+    profiles: ["kanbee-disabled"]
+
 volumes:
   pg_data:
