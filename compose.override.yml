@@ -21,5 +21,10 @@ services:
     environment:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
 
+  front:
+    volumes:
+      - ./kanbee-branding/branding.json:/app/dist/branding.json:ro
+      - ./kanbee-branding/kanbee:/app/dist/kanbee:ro
+
 volumes:
   pg_data:
