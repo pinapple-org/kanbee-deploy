@@ -12,5 +12,19 @@
       { "rel": "icon", "href": "/kanbee/favicon.svg", "type": "image/svg+xml" },
       { "rel": "apple-touch-icon", "href": "/kanbee/apple-touch-icon.png" }
     ]
+  },
+  "app.kanbee.io": {
+    "title": "Kanbee",
+    "languages": "en,pt-br",
+    "defaultLanguage": "pt-br",
+    "defaultApplication": "tracker",
+    "defaultSpace": "tracker:project:DefaultProject",
+    "defaultSpecial": "issues",
+    "lastNameFirst": "false",
+    "links": [
+      { "rel": "manifest", "href": "/kanbee/site.webmanifest" },
+      { "rel": "icon", "href": "/kanbee/favicon.svg", "type": "image/svg+xml" },
+      { "rel": "apple-touch-icon", "href": "/kanbee/apple-touch-icon.png" }
+    ]
   }
 }
