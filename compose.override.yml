@@ -30,7 +30,7 @@ services:
     volumes:
       - meili_data:/meili_data
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7700/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:7700/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,37 +38,56 @@ services:
     networks:
       - huly_net
 
-  front:
-    volumes:
-      - ./kanbee-branding/branding.json:/app/dist/branding.json:ro
-      - ./kanbee-branding/kanbee:/app/dist/kanbee:ro
-
   # Queue migration (Phase 2 step 1): Redpanda/Kafka → PostgreSQL LISTEN/NOTIFY.
   # Custom images built from pinapple-org/kanbee platform fork include the
   # @hcengineering/pgqueue adapter; dispatcher in @hcengineering/kafka routes
   # postgres:// QUEUE_CONFIG values to it automatically.
+  #
+  # Storage migration (Phase 2 step 3): MinIO → Cloudflare R2. The S3 adapter
+  # already ships in the platform; STORAGE_CONFIG just needs to point at R2.
+  # R2 credentials are loaded from /home/jojo/projects/kanbee/.env via the
+  # symlinked .env in this directory (gitignored).
   transactor:
     image: hardcoreeng/transactor:kanbee-v1
     environment:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
 
   workspace:
     image: hardcoreeng/workspace:kanbee-v1
     environment:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
 
   fulltext:
     image: hardcoreeng/fulltext:kanbee-v2
     environment:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
       - FULLTEXT_DB_URL=meilisearch://${MEILI_MASTER_KEY:-kanbee-meili-secret}@meilisearch:7700
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
 
   account:
     environment:
       - QUEUE_CONFIG=postgres://${CR_USERNAME}:${CR_USER_PASSWORD}@cockroach:5432/${CR_DATABASE}?schema=huly_queue
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
+
+  collaborator:
+    environment:
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
+
+  front:
+    environment:
+      - STORAGE_CONFIG=s3|https://8e80e200b2da49226116e6c93a602506.r2.cloudflarestorage.com?accessKey=${R2_ACCESS_KEY}&secretKey=${R2_SECRET_KEY}&region=auto&rootBucket=kanbee
+    volumes:
+      - ./kanbee-branding/branding.json:/app/dist/branding.json:ro
+      - ./kanbee-branding/kanbee:/app/dist/kanbee:ro
 
   # Disable Redpanda — the pgqueue adapter in the Postgres database replaces it.
   redpanda:
+    profiles: ["kanbee-disabled"]
+
+  # Disable MinIO — storage now lives in Cloudflare R2 (see STORAGE_CONFIG).
+  minio:
     profiles: ["kanbee-disabled"]
 
 volumes:
